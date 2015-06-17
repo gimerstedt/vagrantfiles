@@ -1,0 +1,63 @@
+Vagrant.configure(2) do |config|
+	config.vm.box = "ubuntu/trusty64"
+
+	# config.vm.network "private_network", ip: "192.168.33.10"
+	# config.vm.network :private_network, ip: "192.168.33.10"
+
+	# config.vm.synced_folder "../data", "/vagrant_data"
+
+	config.vm.provider "virtualbox" do |vb|
+	# vb.gui = true
+		vb.memory = 2048
+		vb.cpus = 2
+		vb.customize ["modifyvm", :id, "--vram", "128"]
+		vb.customize ["modifyvm", :id, "--name", "leksak"]
+	end
+	
+	config.vm.provision "shell", inline: <<-SHELL
+		USR=ake1
+		sudo -i
+
+		#set hostname
+		echo '$USR-vm' > /etc/hostname
+
+		# add user with top secret password
+		useradd -m -s /usr/bin/zsh -U $USR
+		echo "$USR:hemligt" | chpasswd
+		adduser $USR admin
+
+		# install packages
+		apt-get update
+		apt-get install \
+			rxvt-unicode-256color \
+			x11-xserver-utils \
+			xfonts-terminus \
+			build-essential \
+			awesome \
+			xinit \
+			tmux \
+			curl \
+			vim \
+			git \
+			zsh \
+			-y
+
+
+		# download powerline font
+		wget https://raw.githubusercontent.com/powerline/powerline/develop/font/PowerlineSymbols.otf
+		wget https://raw.githubusercontent.com/powerline/powerline/develop/font/10-powerline-symbols.conf
+		mv PowerlineSymbols.otf /usr/share/fonts/
+		fc-cache -vf
+		mv 10-powerline-symbols.conf /etc/fonts/conf.d/
+
+		# download dotfiles
+		su $USR -c 'mkdir -p ~/git/dotfiles \
+		&& git clone https://github.com/gimerstedt/dotfiles.git ~/git/dotfiles \
+		&& ln -s ~/git/dotfiles/vimrc ~/.vimrc \
+		&& ln -s ~/git/dotfiles/zsh/zshrc ~/.zshrc \
+		&& ln -s ~/git/dotfiles/Xresources ~/.Xresources \
+		&& ln -s ~/git/dotfiles/xinitrc ~/.xinitrc \
+		&& cp ~/git/dotfiles/gitconfig.template ~/.gitconfig'
+
+	SHELL
+end
